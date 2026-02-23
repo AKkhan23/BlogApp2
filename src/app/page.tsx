@@ -6,7 +6,7 @@ export default function HomePage() {
     <div className="flex flex-col items-center justify-center py-20 text-center">
       {/* Hero */}
       <div className="max-w-3xl mx-auto">
-        <span className="text-7xl mb-6 block">✍️</span>
+        <span className="text-7xl mb-6 block">📖</span>
         <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
           Share Your Ideas{' '}
           <span className="text-blue-600 dark:text-blue-400">With The World</span>
@@ -22,7 +22,7 @@ export default function HomePage() {
               Browse Posts
             </Button>
           </Link>
-          <Link href="/signup">
+          <Link href="/blog/create">
             <Button variant="outline" size="lg" className="min-w-40">
               Start Writing
             </Button>

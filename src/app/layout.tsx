@@ -31,6 +31,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+
+         <head>
+        <link rel="icon" href="https://cdn-icons-png.freepik.com/512/6114/6114045.png" />
+      </head>
       <body
         className={`${inter.className} bg-gray-50 dark:bg-gray-950 min-h-screen flex flex-col`}
       >
