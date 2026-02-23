@@ -1,45 +1,80 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { PostCard } from '@/components/blog/PostCard';
-import { Modal } from '@/components/ui/Modal';
-import { SkeletonList } from '@/components/ui/SkeletonCard';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/hooks/useAuth';
-import { usePosts } from '@/hooks/usePosts';
-import toast from 'react-hot-toast';
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { PostCard } from "@/components/blog/PostCard";
+import { Modal } from "@/components/ui/Modal";
+import { SkeletonList } from "@/components/ui/SkeletonCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/hooks/useAuth";
+import { IPost } from "@/types/post.types";
+import toast from "react-hot-toast";
 
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { posts, isLoading, fetchUserPosts, deletePost } = usePosts();
+  const [posts, setPosts] = useState<IPost[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/login?redirect=/dashboard');
+      router.push("/login?redirect=/dashboard");
     }
   }, [isAuthenticated, authLoading, router]);
 
-  useEffect(() => {
-    if (user?._id) {
-      fetchUserPosts(user._id).catch(() => toast.error('Failed to load your posts'));
+  const loadPosts = useCallback(async (authorId: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/posts?author=${authorId}&limit=50`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setPosts(data.data);
+    } catch {
+      toast.error("Failed to load your posts");
+    } finally {
+      setIsLoading(false);
     }
-  }, [user, fetchUserPosts]);
+  }, []);
+
+  useEffect(() => {
+    if (user?._id) loadPosts(user._id);
+  }, [user, loadPosts]);
+
+  // Like handler — updates local state immediately without refetch
+  const handleLikeUpdate = useCallback(
+    (postId: string, newLikeCount: number, liked: boolean) => {
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p._id !== postId) return p;
+          const userId = user?._id ?? "";
+          const newLikes = liked
+            ? [...(p.likes ?? []).filter((id) => String(id) !== userId), userId]
+            : (p.likes ?? []).filter((id) => String(id) !== userId);
+          return { ...p, likes: newLikes as never };
+        }),
+      );
+    },
+    [user],
+  );
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      await deletePost(deleteTarget);
-      toast.success('Post deleted successfully');
+      const res = await fetch(`/api/posts/${deleteTarget}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setPosts((prev) => prev.filter((p) => p._id !== deleteTarget));
+      toast.success("Post deleted successfully");
       setDeleteTarget(null);
     } catch {
-      toast.error('Failed to delete post');
+      toast.error("Failed to delete post");
     } finally {
       setIsDeleting(false);
     }
@@ -49,19 +84,24 @@ export default function DashboardPage() {
   if (!isAuthenticated) return null;
 
   const totalLikes = posts.reduce((acc, p) => acc + (p.likes?.length ?? 0), 0);
-  const totalComments = posts.reduce((acc, p) => acc + (p.comments?.length ?? 0), 0);
+  const totalComments = posts.reduce(
+    (acc, p) => acc + (p.comments?.length ?? 0),
+    0,
+  );
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            👋 Welcome, {user?.name.split(' ')[0]}!
+            👋 Welcome, {user?.name.split(" ")[0]}!
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            You have{' '}
-            <span className="font-semibold text-blue-600 dark:text-blue-400">{posts.length}</span>{' '}
-            {posts.length === 1 ? 'post' : 'posts'} published
+            You have{" "}
+            <span className="font-semibold text-blue-600 dark:text-blue-400">
+              {posts.length}
+            </span>{" "}
+            {posts.length === 1 ? "post" : "posts"} published
           </p>
         </div>
         <Link href="/blog/create">
@@ -72,13 +112,18 @@ export default function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
         {[
-          { label: 'Total Posts', value: posts.length, icon: '📝' },
-          { label: 'Total Likes', value: totalLikes, icon: '❤️' },
-          { label: 'Comments', value: totalComments, icon: '💬' },
+          { label: "Total Posts", value: posts.length, icon: "📝" },
+          { label: "Total Likes", value: totalLikes, icon: "❤️" },
+          { label: "Comments", value: totalComments, icon: "💬" },
         ].map(({ label, value, icon }) => (
-          <div key={label} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
+          <div
+            key={label}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center"
+          >
             <span className="text-2xl block mb-1">{icon}</span>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {value}
+            </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
           </div>
         ))}
@@ -102,6 +147,7 @@ export default function DashboardPage() {
               post={post}
               showActions
               onDelete={(id) => setDeleteTarget(id)}
+              onLikeUpdate={handleLikeUpdate}
             />
           ))}
         </div>

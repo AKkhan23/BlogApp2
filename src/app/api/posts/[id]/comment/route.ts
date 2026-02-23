@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server';
+ import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/get-user';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import Post from '@/models/Post';
 import mongoose from 'mongoose';
@@ -10,7 +10,6 @@ const commentSchema = z.object({
   text: z.string().min(1, 'Comment cannot be empty').max(1000).trim(),
 });
 
-// POST /api/posts/:id/comment — add a comment
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -40,7 +39,6 @@ export async function POST(
     await post.populate('comments.user', 'name');
 
     const newComment = post.comments[post.comments.length - 1];
-
     return successResponse(newComment, 'Comment added successfully', 201);
   } catch (error) {
     console.error('[COMMENT ERROR]', error);
@@ -48,7 +46,6 @@ export async function POST(
   }
 }
 
-// DELETE /api/posts/:id/comment?commentId=xxx
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -68,9 +65,7 @@ export async function DELETE(
     const post = await Post.findById(params.id);
     if (!post) return errorResponse('Post not found', 404);
 
-    const comment = post.comments.find(
-      (c) => c._id.toString() === commentId
-    );
+    const comment = post.comments.find((c) => c._id.toString() === commentId);
     if (!comment) return errorResponse('Comment not found', 404);
 
     if (comment.user.toString() !== currentUser.userId)
@@ -81,7 +76,6 @@ export async function DELETE(
     ) as never;
 
     await post.save();
-
     return successResponse(null, 'Comment deleted');
   } catch (error) {
     console.error('[DELETE COMMENT ERROR]', error);

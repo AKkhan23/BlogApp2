@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server';
+ import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/get-user';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import Post from '@/models/Post';
 import mongoose from 'mongoose';
@@ -13,11 +13,10 @@ export async function POST(
     await connectDB();
 
     const currentUser = await getCurrentUser();
-    if (!currentUser) return errorResponse('Unauthorized', 401);
+    if (!currentUser) return errorResponse('Unauthorized — please log in', 401);
 
-    if (!mongoose.isValidObjectId(params.id)) {
+    if (!mongoose.isValidObjectId(params.id))
       return errorResponse('Invalid post ID', 400);
-    }
 
     const post = await Post.findById(params.id);
     if (!post) return errorResponse('Post not found', 404);
